@@ -7,15 +7,12 @@ export class MongoTest {
             serverSelectionTimeoutMS: 5e3
         })
         const collect = client.db().collection("Account")
-        const data = await collect.findOne({})
+        const data = await collect.findOne({});
 
+        console.log(data);
 
         await client.close()
     }
 }
 
-new MongoTest().connect().then(() => {
-    console.log("done");
-}, (reason) => {
-    console.error(reason);
-});
+new MongoTest().connect().catch(console.error)
