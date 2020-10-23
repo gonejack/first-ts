@@ -4,7 +4,8 @@ import * as streams from 'stream';
 
 class Consumer extends rk.KafkaConsumer {
     topicList: rk.SubscribeTopicList = [];
-    onDataCB = (str: string) => {}
+    onDataCB = (str: string) => {
+    }
     stopped: boolean = false;
     interval: NodeJS.Timeout;
 
@@ -130,7 +131,7 @@ class Consumer extends rk.KafkaConsumer {
 // });
 
 const config: rk.ConsumerGlobalConfig = {
-    'group.id'            : 'test_group',
+    'group.id':             'test_group',
     'metadata.broker.list': '192.168.11.30:9093,192.168.11.31:9093,192.168.11.32:9093',
 
     'offset_commit_cb': (err, topicPartitions) => {
@@ -141,7 +142,7 @@ const config: rk.ConsumerGlobalConfig = {
         }
     },
     // 'debug': 'consumer,cgrp,topic,fetch',
-    'debug': 'all'
+    'debug':            'all'
 };
 const stream = rk.KafkaConsumer.createReadStream(config, {}, {topics: ["test_topic"]});
 
