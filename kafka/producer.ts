@@ -46,17 +46,6 @@ export class Producer {
             data = JSON.stringify(data);
         }
 
-        data = JSON.stringify({
-            INDEX:           '',
-            SOURCE_TYPE:     '',
-            FILE_NAME:       '',
-            SOURCE_HOST:     '',
-            AGENT_TIMESTAMP: '',
-            LOG:             data,
-            TOPIC:           '',
-            FILE_PATH:       '',
-        });
-
         logger.info('发送消息 topic=%s, data=%s', topic, data);
         try {
             await this.producer.produce(topic, null, new Buffer(data));
@@ -74,9 +63,8 @@ export class Producer {
         })
 
         try {
-            const data = await get
+            await get
 
-            logger.debug(data)
             logger.debug("健康检查完成");
 
             return true

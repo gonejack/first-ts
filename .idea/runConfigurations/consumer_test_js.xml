@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="consumer.js" type="NodeJSConfigurationType" nameIsGenerated="true" path-to-js-file="out/kafka/consumer.js" working-dir="$PROJECT_DIR$">
+  <configuration default="false" name="consumer_test.js" type="NodeJSConfigurationType" nameIsGenerated="true" path-to-js-file="out/kafka/consumer_test.js" working-dir="$PROJECT_DIR$">
     <EXTENSION ID="com.jetbrains.nodejs.run.NodeJSProfilingRunConfigurationExtension">
       <profiling one-log-file="true" />
     </EXTENSION>

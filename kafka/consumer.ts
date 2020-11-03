@@ -1,15 +1,119 @@
-import * as rk from 'node-rdkafka'
+import * as Kafka from 'node-rdkafka'
 import * as event from 'events';
 import * as streams from 'stream';
+import {ConsumerGlobalConfig, KafkaConsumer, TopicConfig} from "node-rdkafka";
+import * as util from "util";
 
-class Consumer extends rk.KafkaConsumer {
-    topicList: rk.SubscribeTopicList = [];
+const logger = console
+
+export class NewConsumer {
+    private consumer: KafkaConsumer
+
+    constructor() {
+        const config: ConsumerGlobalConfig = {
+            "group.id":             "test-group",
+            "metadata.broker.list": "127.0.0.1:9092,127.0.0.1:9093",
+            "error_cb":             this.onErr,
+            "rebalance_cb":         this.onRebalanced,
+            "consume_cb":           this.onConsume,
+            "offset_commit_cb":     this.onCommit,
+            'debug':                'all'
+        }
+        const topic: TopicConfig = {}
+
+        this.consumer = new KafkaConsumer(config, topic)
+        this.consumer.on("event.error", this.onEventError)
+        // this.consumer.on("data", this.onData)
+        this.consumer.on("event.log", this.onLog)
+        this.consumer.on("event.stats", this.onStats)
+        this.consumer.on("event.error", this.onErr)
+        this.consumer.on("event.throttle", this.onThrottle)
+    }
+
+    private onEventError(event) {
+        logger.debug("event.ERROR: %j", event);
+    }
+
+    async start() {
+        const connect = new Promise((res, rej) => {
+            this.consumer.connect({}, (err, data) => err ? rej(err) : res(data))
+        })
+
+        let timeout: NodeJS.Timeout = null;
+        const ready = new Promise((res, rej) => {
+            timeout = setTimeout(() => rej("等待超时"), 60e3)
+            this.consumer.on("ready", (info, meta) => {
+                this.consumer.subscribe(["test"])
+                res(info)
+            }).on("data", this.onData)
+        })
+
+        try {
+            return await Promise.all([connect, ready])
+        } catch (e) {
+            throw new Error(util.format("启动出错: %s", e.message))
+        } finally {
+            clearTimeout(timeout)
+        }
+    }
+
+    async stop() {
+        const close = new Promise((res, rej) => {
+            this.consumer.disconnect((err, data) => err ? rej(err) : res(data))
+        })
+
+        return await close
+    }
+
+    async consume() {
+        const consume = new Promise((res, rej) => {
+            this.consumer.consume(1, (err, messages) => err ? rej(err) : res(messages))
+        })
+
+        return await consume
+    }
+
+    onData(data) {
+        logger.info("onData: %O", data)
+    }
+
+    onCommit(err, data) {
+        logger.info("onCommit: %O %O", err, data)
+    }
+
+    onConsume(err, data) {
+        logger.info("onConsume: %O %O", err, data)
+    }
+
+    onRebalanced(err, offsets) {
+        logger.info("onRebalanced: %O %O", err, offsets)
+    }
+
+    onLog(ev) {
+        logger.log("Kafka DEBUG: %j", ev);
+    }
+
+    onStats(data) {
+        logger.log("Kafka STATS: %j", data);
+    }
+
+    onErr(error) {
+        logger.log("Kafka ERROR: %j", error);
+    }
+
+    onThrottle(data) {
+        logger.log("Kafka THROTTLE: %j", data);
+    }
+}
+
+class Consumer extends Kafka.KafkaConsumer {
+    topicList: Kafka.SubscribeTopicList = [];
     onDataCB = (str: string) => {
     }
     stopped: boolean = false;
     interval: NodeJS.Timeout;
 
-    constructor(config: rk.ConsumerGlobalConfig, topicConfig: rk.ConsumerTopicConfig, topicList: rk.SubscribeTopicList, cb: (msg: string) => void) {
+    constructor(config: Kafka.ConsumerGlobalConfig, topicConfig: Kafka.ConsumerTopicConfig, topicList: Kafka.SubscribeTopicList, cb: (msg: string) => void) {
         super(config, topicConfig);
 
         this.topicList = topicList;
@@ -126,42 +230,5 @@ class Consumer extends rk.KafkaConsumer {
     }
 }
 
-// const consumer = new Consumer(config, {}, ["test_topic"], (msg) => {
-//     console.log("处理消息: %s", msg);
-// });
 
-const config: rk.ConsumerGlobalConfig = {
-    'group.id':             'test_group',
-    'metadata.broker.list': '192.168.11.30:9093,192.168.11.31:9093,192.168.11.32:9093',
 
-    'offset_commit_cb': (err, topicPartitions) => {
-        if (err) {
-            console.error('提交偏移量出错', err); // There was an error committing
-        } else {
-            console.debug('已提交偏移量', topicPartitions); // Commit went through. Let's log the topic partitions
-        }
-    },
-    // 'debug': 'consumer,cgrp,topic,fetch',
-    'debug':            'all'
-};
-const stream = rk.KafkaConsumer.createReadStream(config, {}, {topics: ["test_topic"]});
-
-stream.on("error", err => {
-    console.log("err: %s", err.message);
-});
-stream.on("data", msg => {
-    console.log("data", msg.value.toString());
-});
-stream.on("close", () => {
-    console.log("close");
-})
-stream.on("end", () => {
-    console.log("end");
-})
-stream.consumer.on("event.log", (ev) => {
-    console.log("Kafka DEBUG: %j", ev);
-})
-
-setTimeout(() => {
-    stream.close();
-}, 180e3);
