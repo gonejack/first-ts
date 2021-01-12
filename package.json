@@ -18,7 +18,7 @@
     "@types/file-size": "^1.0.0",
     "@types/mongodb": "^3.5.32",
     "@types/puppeteer": "^5.4.2",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "file-size": "^1.0.0",
     "form-data": "^3.0.0",
     "mime": "^2.4.6",
