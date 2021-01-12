@@ -1,10 +1,13 @@
 import * as Kafka from "node-rdkafka";
+import {Message} from "node-rdkafka";
+import {Slot} from "./slot";
 
 const logger = console
 
 export class StreamConsumer {
     private stream: Kafka.ConsumerStream
-
+    private slot = new Slot<Message>()
+    private end = false
     constructor() {
         this.stream = Kafka.KafkaConsumer.createReadStream({
             'group.id':             'test_group',
@@ -17,11 +20,11 @@ export class StreamConsumer {
                 }
             },
             // 'debug': 'consumer,cgrp,topic,fetch',
-            'debug':                'all'
+            // 'debug': 'all'
         }, {}, {topics: ["test"]})
 
         this.stream.on("error", this.onError);
-        this.stream.on("data", this.onData);
+        this.stream.on("data", this.onData.bind(this));
         this.stream.on("close", this.onClose)
         this.stream.on("end", this.onEnd)
         this.stream.consumer.on("event.log", this.onLog)
@@ -29,16 +32,18 @@ export class StreamConsumer {
         this.stream.consumer.on("event.error", this.onErr)
         this.stream.consumer.on("event.throttle", this.onThrottle)
     }
+
     onError(err) {
         logger.log("err: %s", err.message);
     }
-    onData(msg) {
-        logger.log("data", msg.value.toString());
+    async onData(msg: Message) {
+        await this.slot.set(msg)
     }
     onClose() {
         logger.log("close");
     }
     onEnd() {
+        this.end = true
         logger.log("end");
     }
     onLog(ev) {
@@ -52,5 +57,16 @@ export class StreamConsumer {
     }
     onThrottle(data) {
         logger.log("Kafka THROTTLE: %j", data);
+    }
+
+    next() {
+        return !this.end
+    }
+    async consume() {
+        const message = await this.slot.get()
+        return message.value.toString()
+    }
+    async stop() {
+        await new Promise((res, rej) => this.stream.close(res))
     }
 }

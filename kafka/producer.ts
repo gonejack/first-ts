@@ -10,6 +10,7 @@ export class Producer {
             'metadata.broker.list': '127.0.0.1:9092,127.0.0.1:9093',
             'api.version.request':  true,
             // 'dr_cb':                false,
+            // 'debug': 'broker,topic,msg'
         })
         this.producer.setPollInterval(100);
     }
@@ -17,6 +18,9 @@ export class Producer {
     async start() {
         const connectPromise = new Promise((res, rej) => {
             this.producer
+                .on('event.log', ev => {
+                    logger.info("事件：", ev);
+                })
                 .on('delivery-report', (err, report) => logger.debug("错误: %O, 递送报告: %O", err, report))
                 .on('event.error', (err) => {
                     logger.error("生产者出错：", err);

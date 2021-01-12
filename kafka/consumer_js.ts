@@ -1,44 +1,19 @@
 import {Kafka, Consumer, EachMessagePayload} from 'kafkajs'
+import {Slot} from "./slot";
 
 const logger = console
-
-class slot<T> {
-    private need: Promise<T>
-    private needResolve: Function
-    private offer: T
-    private offerResolve: Function
-    async get(): Promise<T> {
-        if (this.offer) {
-            const data = this.offer
-            this.offerResolve()
-            this.offer = null
-            return data
-        } else {
-            this.need = new Promise<T>(res => {
-                this.needResolve = res
-            })
-            return this.need
-        }
-    }
-    async set(data: T): Promise<void> {
-        if (this.need) {
-            this.needResolve(data)
-            this.need = null
-        } else {
-            const offer = new Promise<T>(res => {
-                this.offer = data
-                this.offerResolve = res
-            })
-            await offer
-        }
-    }
-}
 
 export class MyConsumer {
     private consumer: Consumer
     private stopped: boolean
     private crashed: boolean
-    private slot = new slot<EachMessagePayload>()
+    private queue = new Array<EachMessagePayload>()
+    private available = 50
+    private pushLock: Promise<void>
+    private pushUnLock: Function
+    private pullLock: Promise<void>
+    private pullUnLock: Function
+
     constructor() {
         const kafka = new Kafka({
             clientId: 'my-app',
@@ -57,25 +32,59 @@ export class MyConsumer {
             this.crashed = true
         })
     }
+
     async start() {
         await this.consumer.connect()
         await this.consumer.subscribe({topic: "test"})
-        await this.consumer.run({eachMessage: async payload => await this.slot.set(payload)})
+        await this.consumer.run({
+            eachMessage: this.enqueue
+        })
     }
+
+    async enqueue(payload: EachMessagePayload) {
+        if (this.available > 0) {
+            this.queue.push(payload)
+            this.available -= 1
+        } else {
+            while (this.pushLock) {
+                await this.pushLock
+            }
+            this.pushLock = new Promise((res, rej) => {
+                this.pushUnLock = () => {
+                    this.pushUnLock = null;
+                    res();
+                }
+            })
+            await this.pushLock
+        }
+    }
+
     async stop() {
         await this.consumer.stop()
     }
+
     async next() {
-        if (this.crashed || this.stopped) {
-            await this.stop()
-            return false
-        }
-        return true
+        return !(this.crashed || this.stopped);
     }
+
     async consume() {
-        const payload = await this.slot.get()
-        return payload.message.value.toString()
+        while (this.queue.length == 0) {
+            while (this.pullLock) {
+                await this.pullLock
+            }
+            this.pullLock = new Promise<void>(res => {
+                this.pullUnLock = () => {this.pullUnLock = null; res()}
+            })
+            await this.pullLock
+        }
+
+        const data = this.queue.shift()
+        if (this.pushUnLock) {
+            this.pushUnLock()
+        }
+        return data.message.value.toString()
     }
+
     error() {
         if (this.crashed) {
             return new Error("crashed")
