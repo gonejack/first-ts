@@ -7,6 +7,7 @@ import * as fs from "fs";
     await page.goto('https://qq.com');
     const session = await page.target().createCDPSession();
     await session.send('Page.enable');
+    // @ts-ignore
     const {data} = await session.send('Page.captureSnapshot');
     fs.writeFileSync("qq.mht", data)
     await browser.close();

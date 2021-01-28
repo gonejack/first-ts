@@ -12,12 +12,14 @@
     "node-rdkafka": "^2.10.0",
     "puppeteer": "^5.5.0",
     "tar": "^6.0.5",
+    "turndown": "^7.0.0",
     "typescript": "^3.9.7"
   },
   "devDependencies": {
     "@types/file-size": "^1.0.0",
     "@types/mongodb": "^3.5.32",
     "@types/puppeteer": "^5.4.2",
+    "@types/turndown": "^5.0.0",
     "axios": "^0.21.1",
     "file-size": "^1.0.0",
     "form-data": "^3.0.0",
