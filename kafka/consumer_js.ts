@@ -1,5 +1,4 @@
 import {Kafka, Consumer, EachMessagePayload} from 'kafkajs'
-import {Slot} from "./slot";
 
 const logger = console
 

@@ -67,6 +67,6 @@ export class StreamConsumer {
         return message.value.toString()
     }
     async stop() {
-        await new Promise((res, rej) => this.stream.close(res))
+        await new Promise((res, rej) => this.stream.close())
     }
 }
