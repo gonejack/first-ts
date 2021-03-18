@@ -10,7 +10,7 @@
     "heapdump": "^0.3.15",
     "ioredis": "^4.19.4",
     "kafkajs": "^1.14.0",
-    "mongodb": "^2.2.36",
+    "mongodb": "^3.1.13",
     "mongodb-uri": "^0.9.7",
     "node-rdkafka": "^2.10.0",
     "tar": "^6.0.5",
